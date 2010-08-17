@@ -226,8 +226,6 @@ def dump_cstats(stats):
         if len(v[1]) < 2: return 0
         return min(v[1].values())
 
-    ids.dump()
-
     sstats = OrderedDict(sorted(copy.deepcopy(stats).items(), key = key, reverse=True))
     for s, v in sstats.iteritems():
         total = sum(v.values()); ss = "";
@@ -394,7 +392,7 @@ def read_counters(revisions):
            while True:                                  # just read
                (u,r) = cPickle.load(FILE)
                user_counters[u] = r
-               wikipedia.output("%s %s" %(u, r))
+               #wikipedia.output("%s %s" %(u, r))
 
     except IOError, e:
         raise
@@ -561,7 +559,7 @@ def show_edit(e, prefix):
 
 def show_edit_ex(e, extra):
     wikipedia.output("\n\n\n\n\n\n\n >> R%d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
-         (e.i, mark(e.reverts_info, lambda x:x!=-2), e.username, e.comment, revid))
+         (e.i, mark(e.reverts_info, lambda x:x!=-2), e.username, e.comment, e.revid))
     if(e.reverted): show_edit(e.reverted, "Reverted:")
     if(e.edit_group):
         for edit in e.edit_group: show_edit(edit, "Edit Group:")
@@ -693,30 +691,46 @@ def compute_revisions_list():
 
 
 
+def analyze_pkl(revisions, user_counters):
+    """Prints two last revisions from each page in the .pkl"""
+
+    for revisions in read_pkl():
+        analyze_reverts(revisions)
+        
+        for e in revisions[-2:]:
+            extra = lambda:wikipedia.output("e.reverts_info = %d (%s)" % (e.reverts_info, reverts_info_descr(e)))
+            show_edit_ex(e, extra)
+
+def analyze_revs(revisions, user_counters):
+    """Prints all revisions in the .revs"""
+    for e in revisions:
+        _stats[reverts_info_descr(e)][("Registered User", "IP User")[e.ipedit]] += 1
+
+
+
 def main():
-    global _output_arg, _pkl_arg, _counters_arg, _analyze_arg;     
+    global _output_arg, _pkl_arg, _counters_arg, _analyze_arg, _stats;     
     _xml_arg = None; _pkl_arg = None; _compute_pkl_arg = None; _compute_revisions_arg = None;
     _display_pkl_arg = None; _compute_counters_arg = None;_output_arg = None; _analyze_arg = ""; 
     _counters_arg = None; _username_arg = None; _filter_pkl_arg = None; _count_empty_arg = None
     _revisions_arg = None; _evaluate_arg = None
     
     
-    stats = defaultdict(lambda:defaultdict(int)); revisions = [];
+    _stats = defaultdict(lambda:defaultdict(int)); revisions = []; user_counters = []
 
     for arg in wikipedia.handleArgs():
-        if arg.startswith('-xml') and len(arg) > 5: _xml_arg = arg[5:]
-        if arg.startswith('-pkl') and len(arg) > 5: _pkl_arg = arg[5:]
-        if arg.startswith('-revisions') and len(arg) > 11: _revisions_arg = arg[11:]
-        if arg.startswith('-counters') and len(arg) > 10: _counters_arg = arg[10:]
-        if arg.startswith('-username') and len(arg) > 10: _username_arg = arg[10:]
+        if arg.startswith('-xml:'): _xml_arg = arg.split(':')[1]
+        if arg.startswith('-pkl:'): _pkl_arg = arg.split(':')[1]
+        if arg.startswith('-revisions:'): _revisions_arg = arg.split(':')[1]
+        if arg.startswith('-counters:'): _counters_arg = arg.split(':')[1]
+        if arg.startswith('-analyze:'): _analyze_arg = arg.split(':')[1]
+        if arg.startswith('-output:'): _output_arg = arg.split(':')[1]
+        if arg.startswith('-username:'): _username_arg = arg.split(':')[1]
         if arg.startswith('-filter-pkl'): _filter_pkl_arg = True
-        if arg.startswith('-output') and len(arg) > 8: _output_arg = arg[8:]
-        if arg.startswith('-compute-counters'): _compute_counters_arg = True
-        if arg.startswith('-compute-revisions'): _compute_revisions_arg = True
         if arg.startswith('-compute-pkl'): _compute_pkl_arg = True
         if arg.startswith('-display-pkl'): _display_pkl_arg = True
-        if arg.startswith('-analyze'): _analyze_arg = True
-        if arg.startswith('-analyze') and len(arg) > 9: _analyze_arg = arg[9:] 
+        if arg.startswith('-compute-counters'): _compute_counters_arg = True
+        if arg.startswith('-compute-revisions'): _compute_revisions_arg = True
  
 
     if not _xml_arg and not _pkl_arg and not _counters_arg and not _revisions_arg:
@@ -741,20 +755,22 @@ def main():
         wikipedia.output("Reading %s..." % _revisions_arg)
         revisions = cPickle.load(open(_revisions_arg, 'rb'))
 
-    # load precashed counters 
+    # load precashed counters (and filter referenced users if revisions is specified)
     if(_counters_arg):
         user_counters = read_counters(revisions)
         if(_username_arg): 
             wikipedia.output("User %s, has_key %s, counter %s" %
                 (_username_arg, user_counters.has_key(_username_arg), user_counters[_username_arg]))
+            
 
     if(_analyze_arg):
         start = time.time();        
-        if _analyze_arg: analyze(revisions, user_counters)
+        if _analyze_arg.find('revs') > -1: analyze_revs(revisions, user_counters)
+        if _analyze_arg.find('pkl') > -1: analyze_pkl(revisions, user_counters)
         wikipedia.output("Revisions %d. Analysis time: %f" % (len(revisions), time.time() - start))
 
-    if stats:
-        dump_cstats(stats)
+    if _stats:
+        dump_cstats(_stats)
 
 if __name__ == "__main__":
     try:
