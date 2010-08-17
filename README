@@ -1,0 +1,104 @@
+Python MediaWiki Dump Analysis Toolkit
+Cleaned up version of the MediaWiki Dump Analysis code from the wredese project.
+
+Requirements:
+    * Python 2.6+, Linux;
+    * PyWikipedia/Trunk ( http://svn.wikimedia.org/svnroot/pywikipedia/trunk/pywikipedia/ )
+    * OrderedDict (available in Python 2.7 or http://pypi.python.org/pypi/ordereddict/)
+    * 7-Zip (command line 7za)
+
+Input Alternatives:
+    * Wikipedia history dump (e.g. enwiki-20100130-pages-meta-history.xml.7z);
+    * Wikipedia page(s) name / category (use grab-pages.py);
+    * Wikipedia page(s) history (.xml/.7z/.bz2/.gz).
+
+Input Processing:
+    * Detects reverts, reverted edits, revert wars, self-reverts;
+    * Filtering, labeled revisions data sets management, etc;
+    * Calculates users/page counters, revert rates, page diffs, etc (~1 week/C2Duo/Full English Wikipedia dump).
+
+
+
+Examples:
+$ svn checkout http://pymwdat.googlecode.com/svn/trunk/ pymwdat
+
+1) Convert xml dump to .pkl file, compute revisions md5s and diffs.   .xml.7z  ->   .pkl
+./toolkit.py -xml:data/*.7z -compute-pkl -output:dump.pkl
+
+Note that this dump.pkl contains all revisions from 2 pages (Holy Grail, Rocket)
+
+2) Run your custom analysis code on that dump (the example just prints last 2 revisions from each page):
+./toolkit.py -pkl:dump.pkl -analyze:pkl
+
+Here is a typical result (for a single page/two revisions):
+
+Files:
+['/home/dmitry/pymwdat/Holy_Grail.pkl']
+Reading /home/dmitry/pymwdat/Holy_Grail.pkl...
+Done reading /home/dmitry/pymwdat/Holy_Grail.pkl. Read time: 0.138486.
+
+ >> R2819 (-2) by 97.102.133.141: /* Modern interpretations */  Diff: http://en.wikipedia.org/w/index.php?diff=350705433 <<<
+Reverted: 2820 (2814) by Ccrazymann: Rv. Vandalism.  Diff: http://en.wikipedia.org/w/index.php?diff=350705535 <<<
+Edit Group: 2815 (-2) by 97.102.133.141: /* Origins */  Diff: http://en.wikipedia.org/w/index.php?diff=350705081 <<<
+Edit Group: 2816 (-2) by 97.102.133.141: /* Beginnings in literature */  Diff: http://en.wikipedia.org/w/index.php?diff=350705218 <<<
+Edit Group: 2817 (-2) by 97.102.133.141: /* Conceptions of the Grail */  Diff: http://en.wikipedia.org/w/index.php?diff=350705281 <<<
+Edit Group: 2818 (-2) by 97.102.133.141: /* Later legend */  Diff: http://en.wikipedia.org/w/index.php?diff=350705365 <<<
+Edit Group: 2819 (-2) by 97.102.133.141: /* Modern interpretations */  Diff: http://en.wikipedia.org/w/index.php?diff=350705433 <<<
+Edit Group Diff: http://en.wikipedia.org/w/index.php?diff=350705433&oldid=350662105
+ - -==Modern -interpretations==<!-- -This -section ---is -linked -from -[[Halloween -(1978 -film)]] ---> -[[Image:holygrail.jpg|thumb|right|''The -Damsel -----of -----the -Sanct -Grael'' ----by --[[Dante --Gabriel -Rossetti]]]] ----The -story -----Grail -----and -quest -----to -find ---it -became -increasingly -popular -----in -nineteenth -century -referred -literature -such ---as -[[Alfred -Tennyson]]'s --Arthurian -cycle -''[[Idylls --King]]'' -combination -hushed -reverence -chromatic
+
+Old: 95 lines. New: 79 lines.
+Added: 0 lines, 0 words
+Removed: 5 lines, 50 words
+Diff position: lo = 9, ahi = 25, bhi = 9
+e.reverts_info = -2 (between duplicates, by single user (reverted, most likely bad))
+
+
+ >> R2820 (2814) by Ccrazymann: Rv. Vandalism.  Diff: http://en.wikipedia.org/w/index.php?diff=350705535 <<<
+
+ -IRS +==Origins== -EVIL!!!! +===Grail=== +The +++Grail +plays ++a +different +role +everywhere ++it +appears ++but ++in +most +versions ++of +++++the +legend +hero ++must +prove +himself +worthy ++to +be +its +presence ++In +early +tales +[[Percival]]'s +immaturity +prevents +him +from +fulfilling +his +destiny +when +++he +first +encounters ++and +grow ++spiritually +mentally +before +can +locate +again
+
+Old: 79 lines. New: 150 lines.
+Added: 5 lines, 50 words
+Removed: 1 lines, 2 words
+Diff position: lo = 8, ahi = 9, bhi = 80
+e.reverts_info = 2814 (regular revert (a duplicate of a previous revision))
+Revisions 0. Analysis time: 0.156098
+
+3) Produce a combined .revs file containing (custom filtered) list of revisions with reverts analysis:
+./toolkit.py -pkl:dump.pkl -compute-revisions -output:dump.revs
+
+4) Run custom analysis code:
+./toolkit.py -revisions:dump.revs -analyze:revs
+Reading dump.revs...
+Revisions 6664. Analysis time: 0.007720
+===================================================================================
+regular revision                                            :Registered User:1487 (76%)  IP User:465 (23%)
+between duplicates, by single user (reverted, most likely bad):Registered User:263 (12%)  IP User:1800 (87%)
+regular revision (have duplicates)                          :Registered User:417 (75%)  IP User:139 (25%)
+between duplicates, revert that was reverted (revert war)   :Registered User:125 (51%)  IP User:119 (48%)
+regular revert (a duplicate of a previous revision)         :Registered User:1549 (94%)  IP User:93 (5%)
+between duplicates, by other users (reverted, questionable) :Registered User:35 (25%)  IP User:105 (75%)
+between duplicates, reverted (self-reverted)                :Registered User:9 (13%)  IP User:58 (86%)
+===================================================================================
+
+5) Calculate user's counters:
+./toolkit.py -pkl:dump.pkl -compute-counters -output:dump.counters.split
+./toolkit.py -counters:dump.counters.split -output:dump.counters
+
+6) Display user counter:
+./toolkit.py -counters:dump.counters -username:ClueBot
+
+0) Run it against the en-wiki dump:
+./toolkit.py -xml:../enwiki-20100130-pages-meta-history.xml.7z -compute-pkl -output:/data/enwiki-20100130-pages-meta-history.pkl > /data/progress-enwiki-20100130-pages-meta-history.txt 2>&1 &
+
+1) Grab some xml dumps from the Wikipedia:
+./grab-pages.py -dry -page:"Holy Grail"
+./grab-pages.py -dry -category:"Holy Grail"
+./grab-pages.py -output:./data -page:"Holy Grail"
+
+BTW to save space you can .7z the XMLs (one .xml per .7z).
+
+
+Notes:
+Some more examples in the toolkit.py docstring. The code is pretty dumb, you won't find it difficult to hack it. Routine analyze_reverts() and reverts_info_descr() are the ones that you are interested in.  Everything else is just supporting code for converting & filtering revisions and user counters.  
