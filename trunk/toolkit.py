@@ -9,11 +9,13 @@ Cleaned up version of the MediaWiki Dump Analysis code from the wredese project.
 
 Requirements:
     * Python 2.6+, Linux;
-    * PyWikipedia?/Trunk ( http://svn.wikimedia.org/svnroot/pywikipedia/trunk/pywikipedia/ ) 
+    * PyWikipedia/Trunk ( http://svn.wikimedia.org/svnroot/pywikipedia/trunk/pywikipedia/ ) 
+    * OrderedDict (available in Python 2.7 or http://pypi.python.org/pypi/ordereddict/)
+    * 7-Zip (command line 7za)
 
 Input Alternatives:
     * Wikipedia history dump (e.g. enwiki-20100130-pages-meta-history.xml.7z);
-    * Wikipedia page(s) name / category;
+    * Wikipedia page(s) name / category (use grab-pages.py);
     * Wikipedia page(s) history (.xml/.7z/.bz2/.gz). 
 
 Input Processing:
@@ -100,7 +102,7 @@ import os, fnmatch, copy, pprint, cPickle
 from collections import defaultdict 
 from array import array
 
-# Needs Python 2.7 or http://code.activestate.com/recipes/576693/
+# Needs Python 2.7 or http://pypi.python.org/pypi/ordereddict/
 from ordereddict import OrderedDict
 
 # pywikipedia (trunk 2010/03/15) in your PYTHONPATH, configured and running
