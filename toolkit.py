@@ -3,7 +3,7 @@
 from __future__ import division
 
 
-"""
+__doc__ = """
 Python MediaWiki Dump Analysis Toolkit
 Cleaned up version of the MediaWiki Dump Analysis code from the wredese project.
 
@@ -97,14 +97,14 @@ __version__='$Id: r.py 7909 2010-02-05 06:42:52Z Dc987 $'
 
 import re, sys, time, calendar, difflib, string, math, hashlib 
 import os, fnmatch, copy, pprint, cPickle
-from collections import defaultdict, namedtuple 
-from operator import itemgetter
+from collections import defaultdict 
+from array import array
 
 # Needs Python 2.7 or http://code.activestate.com/recipes/576693/
 from ordereddict import OrderedDict
 
 # pywikipedia (trunk 2010/03/15) in your PYTHONPATH, configured and running
-import wikipedia, pagegenerators, xmlreader, editarticle
+import wikipedia, xmlreader
 
 import ddiff
 
@@ -112,10 +112,8 @@ import ddiff
 NNN = 313797035 # total revisions in the wiki dump
 
 # Counters helpers
-counters_dict = lambda:defaultdict(lambda:(0, 0, 0, 0, 0, 0, 0))
+counters_dict = lambda:defaultdict(lambda:array('i', 0, 0, 0, 0, 0, 0, 0))
 good_counter = lambda x:x[-2]*5<x[0]
-
-
 
 # Helpers
 def locate(pattern):
@@ -138,13 +136,11 @@ def timestamp_to_time(timestamp):
     sec = int(timestamp[17:19])
     return calendar.timegm((year, month, day, hour, min, sec))
 
-
-
-
 # TODO:
 # * remove junk symbols?
+# * remove same letters several times in a row? r'(.{1,4}?)\1{3,}'
 def compute_pkl(xmlFilenames):
-        use _output_arg to output diffs, md5s and metainfo to .pkl file'''
+    """use _output_arg to output diffs, md5s and metainfo to .pkl file"""
 
     if(_output_arg):
         FILE = open(_output_arg, 'wb')
@@ -261,7 +257,9 @@ def display_pkl():
 
 
 class FullInfo(object):
-    __slots__ = ('i', 'reverts_info', 'rev_score_info', 'duplicates_info', 'reverted', 'edit_group', 'oldid',                 
+    """See ddiff for diff parameters description. Note: it's ok to add more fields, it won't break .pkl ."""
+    __slots__ = ('i', 'reverts_info', 'rev_score_info', 'duplicates_info', 'reverted', 'edit_group', 'oldid',
+                     
                  'id', 'revid', 'username', 'comment', 'title', 'size', 'utc', 'md5', 'ipedit',
                  'editRestriction', 'moveRestriction', 'isredirect',
                  'al', 'bl', 'lo', 'ahi', 'bhi', 'ilA', 'ilR', 'iwA', 'iwR', 'ilM', 'iwM', 'diff'
@@ -387,7 +385,7 @@ def read_counters(revisions):
             while True:
                 (u,r) = cPickle.load(FILE)
                 if not revisions or u in users:
-                    user_counters[u] = tuple([a+b for (a,b) in zip(user_counters[u] , r)])
+                    user_counters[u] = array([a+b for (a,b) in zip(user_counters[u] , r)])
         else:                                           
            while True:                                  # just read
                (u,r) = cPickle.load(FILE)
@@ -644,7 +642,7 @@ def compute_counters(revisions, user_counters):
         elif e.reverts_info == -4: b = (1, 0, 0, 1, 0, 0, 0)
         elif e.reverts_info == -5: b = (1, 0, 1, 0, 0, 0, 0)
         else: b = (1, 0, 0, 0, 0, 0, 0)
-        user_counters[e.username] = array.array('i', [a+b for (a,b) in zip(user_counters[e.username] , b)])
+        user_counters[e.username] = array('i', [a+b for (a,b) in zip(user_counters[e.username] , b)])
 
 
 
@@ -691,10 +689,8 @@ def compute_revisions_list():
 
 
 def main():
-    global _analyze_arg,
-    global _verbose_arg, _output_arg, _pkl_arg, _counters_arg;
-     
-    _xml_arg = None; _pkl_arg = None; _compute_pkl_arg = None; 
+    global _output_arg, _pkl_arg, _counters_arg, _analyze_arg;     
+    _xml_arg = None; _pkl_arg = None; _compute_pkl_arg = None; _compute_revisions_arg = None;
     _display_pkl_arg = None; _compute_counters_arg = None;_output_arg = None; _analyze_arg = ""; _train_arg = ""
     _counters_arg = None; _username_arg = None; _filter_pkl_arg = None; _count_empty_arg = None
     _revisions_arg = None; _evaluate_arg = None
@@ -719,7 +715,7 @@ def main():
  
 
     if not _xml_arg and not _pkl_arg and not _counters_arg and not _revisions_arg:
-        wikipedia.output(__doc__)
+        wikipedia.output(u"%s" % __doc__)
         return
 
     if _xml_arg:        # XML files input
