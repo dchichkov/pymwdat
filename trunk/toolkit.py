@@ -52,35 +52,37 @@ Usage
 Note: use "> progress.txt 2>&1 &"
 
 Generating corpus (.pkl) from an xml dump(s):
-r.py -compute-pkl -xml:data/Rocket*.7z -output:data/Rocket.pkl
-r.py -compute-pkl -xml:../enwiki-20100130-pages-meta-history.xml.7z -output:data/enwiki-20100130-pages-meta-history.pkl
+./toolkit.py -compute-pkl -xml:data/Rocket*.7z -output:data/Rocket.pkl
+./toolkit.py -compute-pkl -xml:../enwiki-20100130-pages-meta-history.xml.7z -output:data/enwiki-20100130-pages-meta-history.pkl
 
 
 Filtering interesting/known revisions, reverts analysis, producing .revs files:
-./r.py -filter-known-revisions -pkl:data/Rocket.pkl -output:data/Rocket.revs
-./r.py  -filter-known-revisions -pkl:p/enwiki-20100130-pages-meta-history.pkl -output:p/pan-wvc-10.revs
-
-
-Analyzing corpus (.pkl):
-./r.py -pkl:p/pan-wvc-10.full -counters:p/ratings-enwiki-20100130.merged -analyze:decisiontree -vvv
-
-Computing user counters:
-./r.py -pkl:/data/enwiki-20100130.none.full -compute-counters -output:p/counters-enwiki-20100130.none.full.split > progress-counters-enwiki-20100130.none.full.split.txt 2>&1 &
+./toolkit.py -pkl:Holy_Grail.pkl -compute-revisions -output:Holy_Grail.revs
+./toolkit.py -compute-revisions -pkl:data/Rocket.pkl -output:data/Rocket.revs
+./toolkit.py -filter-known-revisions -pkl:p/enwiki-20100130-pages-meta-history.pkl -output:p/pan-wvc-10.revs
 
 Filtering corpus:
-./r.py -pkl:/data/enwiki-20100130.none.full -filter-pkl -output:p/pan-wvc-10.none.full > progress-wvc-filter.none.full.txt 2>&1 &
+./toolkit.py -pkl:/data/enwiki-20100130.none.full -filter-pkl -output:p/pan-wvc-10.none.full > progress-wvc-filter.none.full.txt 2>&1 &
+
+Analyzing corpus (.pkl):
+./toolkit.py -pkl:p/pan-wvc-10.full -counters:p/ratings-enwiki-20100130.merged -analyze:decisiontree -vvv
 
 
-Filtering known revisions/producing .known files:
-./r.py -pkl:p/pan-wvc-10.none.full -filter-known-revisions -output:p/pan-wvc-10.none.known
-./r.py -pkl:p/Rocket.none.full -filter-known-revisions -output:p/enwiki.Rocket.none.known
+Computing and viewing user counters:
+./toolkit.py -pkl:Holy_Grail.pkl -compute-counters -output:Holy_Grail.counters.split
+./toolkit.py -counters:Holy_Grail.counters.split -output:Holy_Grail.counters
+./toolkit.py -counters:Holy_Grail.counters -username:ClueBot
+
+
+Computing counters:
+./toolkit.py -pkl:/data/enwiki-20100130.none.full -compute-counters -output:p/counters-enwiki-20100130.none.full.split > progress-counters-enwiki-20100130.none.full.split.txt 2>&1 &
 
 Merging counters:
-./r.py -counters:p/counters-enwiki-20100130.none.full.split -output:counters-enwiki-20100130.none.full.merged
+./toolkit.py -counters:p/counters-enwiki-20100130.none.full.split -output:counters-enwiki-20100130.none.full.merged
 
 Filtering counters:
-./r.py -counters:p/counters-enwiki-20100130.pan10.merged -revisions:p/pan-wvc-10.test-corpus.none.known -output:p/counters-enwiki-20100130.pan10-test.filtered
-./r.py -counters:p/counters-enwiki-20100130.pan10.filtered -pkl:p/Rocket.full -output:p/counters-enwiki-20100130.pan10-test.filtered
+./toolkit.py -counters:p/counters-enwiki-20100130.pan10.merged -revisions:p/pan-wvc-10.revs -output:p/counters-enwiki-20100130.pan10-test.filtered
+./toolkit.py -counters:p/counters-enwiki-20100130.pan10.filtered -pkl:p/Rocket.full -output:p/counters-enwiki-20100130.pan10-test.filtered
 
 
 &params;
@@ -114,7 +116,7 @@ import ddiff
 NNN = 313797035 # total revisions in the wiki dump
 
 # Counters helpers
-counters_dict = lambda:defaultdict(lambda:array('i', 0, 0, 0, 0, 0, 0, 0))
+counters_dict = lambda:defaultdict(lambda:array('i', [0, 0, 0, 0, 0, 0, 0]))
 good_counter = lambda x:x[-2]*5<x[0]
 
 # Helpers
@@ -375,7 +377,7 @@ def read_counters(revisions):
     user_counters = counters_dict()
     start = time.time()
     try:
-        if _output_arg and not _analyze_arg and not _train_arg:  # read and merge
+        if _output_arg and not _analyze_arg:                    # read and merge
             users = {}
             if revisions:                               
                 referenced_users(revisions, users)               # filter / known users (use known revisions)            
@@ -387,17 +389,18 @@ def read_counters(revisions):
             while True:
                 (u,r) = cPickle.load(FILE)
                 if not revisions or u in users:
-                    user_counters[u] = array([a+b for (a,b) in zip(user_counters[u] , r)])
+                    user_counters[u] = array('i', [a+b for (a,b) in zip(user_counters[u] , r)])
         else:                                           
            while True:                                  # just read
                (u,r) = cPickle.load(FILE)
                user_counters[u] = r
+               wikipedia.output("%s %s" %(u, r))
 
     except IOError, e:
         raise
     except EOFError, e:
         wikipedia.output("Done reading %s. Read time: %f. Total users: %d" % (_counters_arg, time.time() - start, len(user_counters)))
-    if(_output_arg and not _analyze_arg and not _train_arg):
+    if(_output_arg and not _analyze_arg):
         #wikipedia.output("Filtering counters <0 or >10")
         FILE = open(_output_arg, 'wb')
         for u, r in user_counters.iteritems():
@@ -693,7 +696,7 @@ def compute_revisions_list():
 def main():
     global _output_arg, _pkl_arg, _counters_arg, _analyze_arg;     
     _xml_arg = None; _pkl_arg = None; _compute_pkl_arg = None; _compute_revisions_arg = None;
-    _display_pkl_arg = None; _compute_counters_arg = None;_output_arg = None; _analyze_arg = ""; _train_arg = ""
+    _display_pkl_arg = None; _compute_counters_arg = None;_output_arg = None; _analyze_arg = ""; 
     _counters_arg = None; _username_arg = None; _filter_pkl_arg = None; _count_empty_arg = None
     _revisions_arg = None; _evaluate_arg = None
     
@@ -706,10 +709,10 @@ def main():
         if arg.startswith('-revisions') and len(arg) > 11: _revisions_arg = arg[11:]
         if arg.startswith('-counters') and len(arg) > 10: _counters_arg = arg[10:]
         if arg.startswith('-username') and len(arg) > 10: _username_arg = arg[10:]
-        if arg.startswith('-retrain'): _retrain_arg = True
         if arg.startswith('-filter-pkl'): _filter_pkl_arg = True
         if arg.startswith('-output') and len(arg) > 8: _output_arg = arg[8:]
         if arg.startswith('-compute-counters'): _compute_counters_arg = True
+        if arg.startswith('-compute-revisions'): _compute_revisions_arg = True
         if arg.startswith('-compute-pkl'): _compute_pkl_arg = True
         if arg.startswith('-display-pkl'): _display_pkl_arg = True
         if arg.startswith('-analyze'): _analyze_arg = True
