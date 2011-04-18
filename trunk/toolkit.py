@@ -106,11 +106,7 @@ from array import array
 
 # Needs Python 2.7 or http://pypi.python.org/pypi/ordereddict/
 from ordereddict import OrderedDict
-
-# pywikipedia (trunk 2010/03/15) in your PYTHONPATH, configured and running
-import wikipedia, xmlreader
-
-import ddiff
+import xmlreader, ddiff
 
 
 NNN = 313797035 # total revisions in the wiki dump
@@ -120,6 +116,10 @@ counters_dict = lambda:defaultdict(lambda:array('i', [0, 0, 0, 0, 0, 0, 0]))
 good_counter = lambda x:x[-2]*5<x[0]
 
 # Helpers
+def output(s):
+    '''Debug output'''
+    print s    
+
 def locate(pattern):
     '''Locate all files matching supplied filename pattern in and below
     supplied root directory.'''
@@ -180,7 +180,7 @@ def compute_pkl(xmlFilenames):
                 al = bl             # bl - previous revision text (split into lines)
             else: 
                 al = []; bid = id; DT = (time.time() - start) / 3600;
-                wikipedia.output("R %d T %f ETA %f : %d %s %s %s" % 
+                output("R %d T %f ETA %f : %d %s %s %s" % 
                     (total_revisions, DT, (NNN - total_revisions) / total_revisions * DT, id, e.id, e.revisionid, e.title))
             bl = e.text.splitlines()
 
@@ -217,8 +217,8 @@ def compute_pkl(xmlFilenames):
                             ilA, ilR, iwA, iwR, ilM, iwM, diff)
                     cPickle.dump(full_info, FILE, -1)
                 except:
-                    wikipedia.output("Error at: %s %s %s %s" % (e.id, e.revisionid, e.title, e.timestamp))           
-    wikipedia.output("%f seconds, %d revisions" % (time.time() - start, total_revisions))
+                    output("Error at: %s %s %s %s" % (e.id, e.revisionid, e.title, e.timestamp))           
+    output("%f seconds, %d revisions" % (time.time() - start, total_revisions))
 
 
 def dump_cstats(stats):
@@ -236,9 +236,9 @@ def dump_cstats(stats):
             if len(ss) > 80: ss += "\n%-60s:" % ""
         sstats[s] = ss
 
-    wikipedia.output("===================================================================================")
-    for k, v in sstats.iteritems(): wikipedia.output("%-60s:%s" % (k, v))
-    wikipedia.output("===================================================================================")
+    output("===================================================================================")
+    for k, v in sstats.iteritems(): output("%-60s:%s" % (k, v))
+    output("===================================================================================")
 
 
 
@@ -250,11 +250,11 @@ def display_pkl():
         while True:
             info = cPickle.load(FILE)
             total_revisions += 1
-            wikipedia.output(str(info))
+            output(str(info))
     except IOError, e:
         raise
     except EOFError, e:
-        wikipedia.output("Revisions %d. Analysis time: %f" % (total_revisions, time.time() - start))
+        output("Revisions %d. Analysis time: %f" % (total_revisions, time.time() - start))
 
 
 
@@ -291,10 +291,10 @@ class EmptyFullInfoPlaceholder(object):
 
 def read_pkl():
     pklFilenames = sorted(locate(_pkl_arg))
-    wikipedia.output(u"Files: \n%s\n\n" % pklFilenames)
+    output(u"Files: \n%s\n\n" % pklFilenames)
 
     for pklFilename in pklFilenames:
-        wikipedia.output("Reading %s..." % pklFilename)
+        output("Reading %s..." % pklFilename)
         FILE = open(pklFilename, 'rb')
         start = time.time(); size = os.path.getsize(pklFilename); show_progress = time.time() + 15
         revisions = [];
@@ -311,13 +311,13 @@ def read_pkl():
 
                     if(time.time() > show_progress):
                         DT = (time.time() - start) / 3600; BPH = FILE.tell() / DT; show_progress = time.time() + 15
-                        wikipedia.output("DT %f Hours, ETA %f Hours." % (DT, (size/BPH - DT)) )
+                        output("DT %f Hours, ETA %f Hours." % (DT, (size/BPH - DT)) )
 
                 revisions.append(info)
         except IOError, e:
             raise
         except EOFError, e:            
-            wikipedia.output("Done reading %s. Read time: %f." % (pklFilename, time.time() - start))
+            output("Done reading %s. Read time: %f." % (pklFilename, time.time() - start))
             yield revisions
 
 
@@ -333,7 +333,7 @@ def filter_pkl():
         total_pages += 1;
         total_revisions += len(revisions)
         if(total_pages%100 == 0):
-            wikipedia.output("Page %d. Revs %d. Filtered Pages %d. Filtered Revs %d. " %
+            output("Page %d. Revs %d. Filtered Pages %d. Filtered Revs %d. " %
                 (total_pages, total_revisions, filtered_pages, filtered_revisions))
         
         # Add your own filter. e.g e.utc > 1258329600
@@ -370,7 +370,7 @@ def read_counters(revisions):
     If _output_arg global is provided, counters will be merged and saved;
     If revisions argument is provided only referenced users revisions will be saved;"""
     
-    wikipedia.output("Reading %s..." % _counters_arg)
+    output("Reading %s..." % _counters_arg)
     FILE = open(_counters_arg, 'rb')
     user_counters = counters_dict()
     start = time.time()
@@ -392,14 +392,14 @@ def read_counters(revisions):
            while True:                                  # just read
                (u,r) = cPickle.load(FILE)
                user_counters[u] = r
-               #wikipedia.output("%s %s" %(u, r))
+               #output("%s %s" %(u, r))
 
     except IOError, e:
         raise
     except EOFError, e:
-        wikipedia.output("Done reading %s. Read time: %f. Total users: %d" % (_counters_arg, time.time() - start, len(user_counters)))
+        output("Done reading %s. Read time: %f. Total users: %d" % (_counters_arg, time.time() - start, len(user_counters)))
     if(_output_arg and not _analyze_arg):
-        #wikipedia.output("Filtering counters <0 or >10")
+        #output("Filtering counters <0 or >10")
         FILE = open(_output_arg, 'wb')
         for u, r in user_counters.iteritems():
             # if(r < 0 or r > 10):
@@ -547,23 +547,23 @@ def show_diff(e):
             elif(v < -5): v = -5
             text += mark(marker[v] + t, lambda x:x[1]=='-');
 
-        wikipedia.output(text)
-        wikipedia.output("Old: %s lines. New: %s lines." % (e.al, e.bl))
-        wikipedia.output("Added: %d lines, %d words" % (e.ilA, e.iwA))
-        wikipedia.output("Removed: %d lines, %d words" % (e.ilR, e.iwR))
-        wikipedia.output("Diff position: lo = %d, ahi = %d, bhi = %d" % (e.lo, e.ahi, e.bhi))
+        output(text)
+        output("Old: %s lines. New: %s lines." % (e.al, e.bl))
+        output("Added: %d lines, %d words" % (e.ilA, e.iwA))
+        output("Removed: %d lines, %d words" % (e.ilR, e.iwR))
+        output("Diff position: lo = %d, ahi = %d, bhi = %d" % (e.lo, e.ahi, e.bhi))
 
 def show_edit(e, prefix):
-    wikipedia.output("%s %d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
+    output("%s %d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
      (prefix, e.i, mark(e.reverts_info, lambda x:x!=-2), e.username, e.comment, e.revid))
 
 def show_edit_ex(e, extra):
-    wikipedia.output("\n\n\n\n\n\n\n >> R%d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
+    output("\n\n\n\n\n\n\n >> R%d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
          (e.i, mark(e.reverts_info, lambda x:x!=-2), e.username, e.comment, e.revid))
     if(e.reverted): show_edit(e.reverted, "Reverted:")
     if(e.edit_group):
         for edit in e.edit_group: show_edit(edit, "Edit Group:")
-        wikipedia.output("Edit Group Diff: http://en.wikipedia.org/w/index.php?diff=%d&oldid=%s" % (e.edit_group[-1].revid, e.edit_group[0].oldid))
+        output("Edit Group Diff: http://en.wikipedia.org/w/index.php?diff=%d&oldid=%s" % (e.edit_group[-1].revid, e.edit_group[0].oldid))
             
     show_diff(e)
     if(extra): extra()
@@ -664,7 +664,7 @@ def compute_counters_dictionary():
         total_revisions += len(revisions)
 
         if(total_pages%1000 == 0):
-            wikipedia.output("Page %d. Revisions %d. Users %s. Analysis time: %f. " %
+            output("Page %d. Revisions %d. Users %s. Analysis time: %f. " %
                 (total_pages, total_revisions, len(user_counters), time.time() - start))
 
             for u, r in user_counters.iteritems():
@@ -687,7 +687,7 @@ def compute_revisions_list():
 
     if(_output_arg): 
         cPickle.dump(revisions_list, open(_output_arg, 'wb'), -1); 
-        wikipedia.output("Done. %d revisions have been filtered." % len(revisions_list))
+        output("Done. %d revisions have been filtered." % len(revisions_list))
 
 
 
@@ -698,7 +698,7 @@ def analyze_pkl(revisions, user_counters):
         analyze_reverts(revisions)
         
         for e in revisions[-2:]:
-            extra = lambda:wikipedia.output("e.reverts_info = %d (%s)" % (e.reverts_info, reverts_info_descr(e)))
+            extra = lambda:output("e.reverts_info = %d (%s)" % (e.reverts_info, reverts_info_descr(e)))
             show_edit_ex(e, extra)
 
 def analyze_revs(revisions, user_counters):
@@ -715,10 +715,9 @@ def main():
     _counters_arg = None; _username_arg = None; _filter_pkl_arg = None; _count_empty_arg = None
     _revisions_arg = None; _evaluate_arg = None
     
-    
     _stats = defaultdict(lambda:defaultdict(int)); revisions = []; user_counters = []
 
-    for arg in wikipedia.handleArgs():
+    for arg in sys.argv:
         if arg.startswith('-xml:'): _xml_arg = arg.split(':')[1]
         if arg.startswith('-pkl:'): _pkl_arg = arg.split(':')[1]
         if arg.startswith('-revisions:'): _revisions_arg = arg.split(':')[1]
@@ -734,13 +733,12 @@ def main():
  
 
     if not _xml_arg and not _pkl_arg and not _counters_arg and not _revisions_arg:
-        wikipedia.output(u"%s" % __doc__)
+        output(u"%s" % __doc__)
         return
 
     if _xml_arg:        # XML files input
         xmlFilenames = sorted(locate(_xml_arg))
-        wikipedia.output(u"Files: \n%s\n\n" % xmlFilenames)
-        mysite = wikipedia.getSite()
+        output(u"Files: \n%s\n\n" % xmlFilenames)
         
         
     if(_compute_pkl_arg): compute_pkl(xmlFilenames); return
@@ -752,14 +750,14 @@ def main():
 
     # load precashed revisions
     if(_revisions_arg):
-        wikipedia.output("Reading %s..." % _revisions_arg)
+        output("Reading %s..." % _revisions_arg)
         revisions = cPickle.load(open(_revisions_arg, 'rb'))
 
     # load precashed counters (and filter referenced users if revisions is specified)
     if(_counters_arg):
         user_counters = read_counters(revisions)
         if(_username_arg): 
-            wikipedia.output("User %s, has_key %s, counter %s" %
+            output("User %s, has_key %s, counter %s" %
                 (_username_arg, user_counters.has_key(_username_arg), user_counters[_username_arg]))
             
 
@@ -767,14 +765,11 @@ def main():
         start = time.time();        
         if _analyze_arg.find('revs') > -1: analyze_revs(revisions, user_counters)
         if _analyze_arg.find('pkl') > -1: analyze_pkl(revisions, user_counters)
-        wikipedia.output("Revisions %d. Analysis time: %f" % (len(revisions), time.time() - start))
+        output("Revisions %d. Analysis time: %f" % (len(revisions), time.time() - start))
 
     if _stats:
         dump_cstats(_stats)
 
 if __name__ == "__main__":
-    try:
-        main()
-    finally:
-        wikipedia.stopme()
+    main()
 
