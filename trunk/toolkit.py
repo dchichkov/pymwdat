@@ -99,7 +99,7 @@ and the bot will only work on that single page.
 
 __version__='$Id: r.py 7909 2010-02-05 06:42:52Z Dc987 $'
 
-import re, sys, time, calendar, difflib, string, math, hashlib 
+import re, sys, time, calendar, difflib, string, math, hashlib
 import os, fnmatch, copy, pprint, cPickle
 from collections import defaultdict 
 from array import array
@@ -118,7 +118,12 @@ good_counter = lambda x:x[-2]*5<x[0]
 # Helpers
 def output(s):
     '''Debug output'''
-    print s    
+    s = s.replace('{lightgreen}', '\033[32m')
+    s = s.replace('{lightpurple}', '\033[35m')
+    s = s.replace('{lightred}', '\033[31m')
+    s = s.replace('{lightblue}', '\033[34m')   
+    s = s.replace('{default}', '\033[0m')
+    print s
 
 def locate(pattern):
     '''Locate all files matching supplied filename pattern in and below
@@ -191,16 +196,16 @@ def compute_pkl(xmlFilenames):
             (d, dposl) = ddiff.ddiff(al, bl)     # calculate ddiff for lines
             a = []; b = []; ilA = 0; ilR = 0; ilM = 0;
             for t, v in d.items():
-                if(v > 0 and ilA < 5): b.extend(p.split(t)); ilA += 1
-                elif(v < 0 and ilR < 5): a.extend(p.split(t)); ilR += 1
+                if v > 0: b.extend(p.split(t)); ilA += 1
+                elif v < 0: a.extend(p.split(t)); ilR += 1
                 else: ilM += 1
 
             if(_output_arg):
                 (d, dposw) = ddiff.ddiff(a, b); iwA = 0; iwR = 0; iwM = 0
                 diff = []
                 for t, v in d.items():
-                    if(v > 0 and iwA < 50): diff.append((t, v)); iwA += 1
-                    elif(v < 0 and iwR < 50): diff.append((t, v)); iwR += 1
+                    if v > 0: diff.append((t, v)); iwA += 1
+                    elif v < 0: diff.append((t, v)); iwR += 1
                     else: iwM += 1
 
                 # calculate page text hashes (have nothing to do with diffs)
@@ -530,11 +535,11 @@ def analyze_reverts(revisions):
 
 def mark(value, function = None):
     if(not function):
-        return "\03{lightpurple}%s\03{default}" % unicode(value)
+        return "{lightpurple}%s{default}" % value
 
-    if(function(value) == True): return "\03{lightgreen}%s\03{default}" % unicode(value)
-    if(function(value) == False): return "\03{lightred}%s\03{default}" % unicode(value)
-    return "\03{lightpurple}%s\03{default}" % unicode(value)
+    if(function(value) == True): return "{lightgreen}%s{default}" % value
+    if(function(value) == False): return "{lightred}%s{default}" % value
+    return "{lightpurple}%s{default}" % value
 
 
 def show_diff(e):
@@ -554,11 +559,11 @@ def show_diff(e):
         output("Diff position: lo = %d, ahi = %d, bhi = %d" % (e.lo, e.ahi, e.bhi))
 
 def show_edit(e, prefix):
-    output("%s %d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
+    output("%s %d (%s) by %s: {lightblue}%s{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
      (prefix, e.i, mark(e.reverts_info, lambda x:x!=-2), e.username, e.comment, e.revid))
 
 def show_edit_ex(e, extra):
-    output("\n\n\n\n\n\n\n >> R%d (%s) by %s: \03{lightblue}%s\03{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
+    output("\n\n\n\n\n\n\n >> R%d (%s) by %s: {lightblue}%s{default}  Diff: http://en.wikipedia.org/w/index.php?diff=%d <<< " %   \
          (e.i, mark(e.reverts_info, lambda x:x!=-2), e.username, e.comment, e.revid))
     if(e.reverted): show_edit(e.reverted, "Reverted:")
     if(e.edit_group):
