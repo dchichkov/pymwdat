@@ -3,7 +3,6 @@ Cleaned up version of the MediaWiki Dump Analysis code from the wredese project.
 
 Requirements:
     * Python 2.6+, Linux;
-    * PyWikipedia/Trunk ( http://svn.wikimedia.org/svnroot/pywikipedia/trunk/pywikipedia/ )
     * OrderedDict (available in Python 2.7 or http://pypi.python.org/pypi/ordereddict/)
     * 7-Zip (command line 7za)
 
