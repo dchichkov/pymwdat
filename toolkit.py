@@ -706,10 +706,32 @@ def analyze_pkl(revisions, user_counters):
             extra = lambda:output("e.reverts_info = %d (%s)" % (e.reverts_info, reverts_info_descr(e)))
             show_edit_ex(e, extra)
 
+	if _output_arg: export_reverts_csv(revisions, user_counters)
+
 def analyze_revs(revisions, user_counters):
     """Prints all revisions in the .revs"""
     for e in revisions:
         _stats[reverts_info_descr(e)][("Registered User", "IP User")[e.ipedit]] += 1
+
+
+def export_reverts_csv(revisions, user_counters):
+    import csv
+    csvWriter = csv.writer(open(_output_arg, 'wb'))
+    csvWriter.writerow(['newrevisionid','diffurl','tag','commenttag', 'editgroupdiffurl','revertdiffurl','revertcomment'])
+    for i, e in enumerate(revisions):
+        edit_group_diff = ""; revert_diff = "";  revert_comment = ""; diff = "http://en.wikipedia.org/w/index.php?diff=%d" % e.revid
+        if(e.edit_group and e.edit_group[0].oldid): edit_group_diff = "http://en.wikipedia.org/w/index.php?diff=%d&oldid=%d" % (e.edit_group[-1].revid, e.edit_group[0].oldid) 
+        if(e.reverted): revert_diff = "http://en.wikipedia.org/w/index.php?diff=%d" % e.reverted.revid; 
+        if(e.reverted and e.reverted.comment): revert_comment = e.reverted.comment
+
+        csvWriter.writerow(
+                         [e.revid, 
+                          # known, verified,   
+                          diff, reverts_info_descr(e), analyze_comment(e.comment)[0],
+                          edit_group_diff, revert_diff, revert_comment.encode("utf-8")   
+                          ])
+        _stats['total'][reverts_info_descr(e)] += 1
+        _stats[('regular', 'ip')[e.ipedit]][reverts_info_descr(e)] += 1
 
 
 
