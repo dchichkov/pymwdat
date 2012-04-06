@@ -105,7 +105,7 @@ from collections import defaultdict
 from array import array
 
 # Needs Python 2.7 or http://pypi.python.org/pypi/ordereddict/
-from ordereddict import OrderedDict
+from collections import OrderedDict
 import xmlreader, ddiff
 
 
